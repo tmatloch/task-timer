@@ -26,8 +26,8 @@ class Entry(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     task = models.ForeignKey('Task', on_delete=models.CASCADE)
     start_date_time = models.DateTimeField()
-    end_date_time = models.DateTimeField()
-    is_finished = models.BooleanField()
+    end_date_time = models.DateTimeField(blank=True, null=True)
+    is_finished = models.BooleanField(default=False)
 
     class Meta:
         ordering = ('start_date_time',)

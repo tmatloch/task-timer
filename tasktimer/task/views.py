@@ -28,3 +28,56 @@ def task(request):
             serializer.save()
             return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
         return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PATCH'])
+def task_detail(request, pk):
+    try:
+        task = Task.objects.get(pk=pk)
+    except Task.DoesNotExist:
+       return Response(status=status.HTTP_404_NOT_FOUND)
+    if request.method == 'GET':
+        serializer = TaskSerializer(task)
+        return JsonResponse(serializer.data, safe=False)
+    elif request.method == 'PATCH':
+        data = request.data
+        is_running = data.get("is_running")
+        if(is_running != None):
+            if(is_running):
+                create_entry(task)
+            else:
+                running_entry=Entry.objects.filter(task=task.id, end_date_time=None).last()
+                close_entry(running_entry)
+                recalculate_duration(task)
+        serializer = TaskSerializer(task, data=data, partial=True)
+        if(serializer.is_valid()):
+            serializer.save()
+            return JsonResponse(serializer.data, status=status.HTTP_200_OK)
+        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+def create_entry(task):
+    now_date = datetime.now().isoformat()
+    entry = Entry.objects.create(task=task, start_date_time=now_date)
+
+def close_entry(entry):
+    now_date = datetime.now().isoformat()
+    entry.end_date_time=now_date
+    entry.is_finished=True
+    entry.save()
+
+def recalculate_duration(task):
+    #TODO recalculate DURATION
+    task.save()
+
+@api_view(['GET'])
+def entry_list(request, pk):
+    try:
+        task = Task.objects.get(pk=pk)
+    except Task.DoesNotExist:
+       return Response(status=status.HTTP_404_NOT_FOUND)
+    if request.method == 'GET':
+        task_entries = Entry.objects.filter(task=task)
+        serializer = EntrySerializer(task_entries, many=True)
+        return JsonResponse(serializer.data, safe=False)
+
