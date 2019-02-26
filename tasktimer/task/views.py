@@ -5,6 +5,7 @@ from datetime import timedelta, datetime, timezone
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from rest_framework.renderers import JSONRenderer
+from rest_framework.response import Response
 from rest_framework.parsers import JSONParser
 from rest_framework.decorators import api_view 
 from rest_framework.permissions import IsAuthenticated
@@ -33,7 +34,7 @@ def task(request):
         return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET', 'PATCH'])
+@api_view(['GET', 'PATCH', 'DELETE'])
 def task_detail(request, pk):
     try:
         task = Task.objects.get(pk=pk)
@@ -67,6 +68,9 @@ def task_detail(request, pk):
             serializer.save()
             return JsonResponse(serializer.data, status=status.HTTP_200_OK)
         return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    elif request.method == 'DELETE':
+        Task.objects.get(pk=pk).delete()
+        return Response(status=status.HTTP_200_OK)
 
 
 def create_entry(task):
