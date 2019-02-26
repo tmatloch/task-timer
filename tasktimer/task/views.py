@@ -49,6 +49,7 @@ def task_detail(request, pk):
         if(is_running != None):
             if(is_running):
                 create_entry(task)
+                recalculate_duration(task)
             else:
                 running_entry=Entry.objects.filter(task=task.id, end_date_time=None).last()
                 close_entry(running_entry)
@@ -91,7 +92,8 @@ def calculate_entry(entry):
     if(end_date_time == None):
         offset = pytz.timezone("Europe/Warsaw")
         end_date_time = datetime.now(timezone.utc) + offset.utcoffset(datetime.now())
-    return end_date_time - start_date_time
+    duration = end_date_time - start_date_time
+    return duration - timedelta(microseconds=duration.microseconds)
 
 def recalculation_needed(task):
     not_finished_task = Entry.objects.filter(task=task.id, is_finished=False).last()
