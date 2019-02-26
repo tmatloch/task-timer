@@ -49,6 +49,14 @@ def task_detail(request, pk):
                 running_entry=Entry.objects.filter(task=task.id, end_date_time=None).last()
                 close_entry(running_entry)
                 recalculate_duration(task)
+        is_finished = data.get("is_finished")
+        if(is_finished !=None):
+            if(is_finished):
+                finished_task(task)
+                running_entry=Entry.objects.filter(task=task.id, end_date_time=None).last()
+                if(running_entry!= None):
+                    close_entry(running_entry)
+                    recalculate_duration(task)
         serializer = TaskSerializer(task, data=data, partial=True)
         if(serializer.is_valid()):
             serializer.save()
@@ -68,6 +76,12 @@ def close_entry(entry):
 
 def recalculate_duration(task):
     #TODO recalculate DURATION
+    task.save()
+
+def finished_task(task):
+    now_date = datetime.now().isoformat()
+    task.is_running = False
+    task.end_date_time=now_date
     task.save()
 
 @api_view(['GET'])
