@@ -1,4 +1,6 @@
-from datetime import timedelta, datetime
+import pytz
+
+from datetime import timedelta, datetime, timezone
 
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
@@ -17,6 +19,7 @@ from .serializers import TaskSerializer, EntrySerializer, UserSerializer
 def task(request):
     if request.method == 'GET':
         tasks = Task.objects.filter(owner=request.user).order_by("start_date_time")
+        tasks = map(recalculation_needed, tasks)
         serializer = TaskSerializer(tasks, many=True)
         return JsonResponse(serializer.data, safe=False)
     elif request.method == 'POST':
@@ -37,6 +40,7 @@ def task_detail(request, pk):
     except Task.DoesNotExist:
        return Response(status=status.HTTP_404_NOT_FOUND)
     if request.method == 'GET':
+        task = recalculation_needed(task)
         serializer = TaskSerializer(task)
         return JsonResponse(serializer.data, safe=False)
     elif request.method == 'PATCH':
@@ -75,14 +79,35 @@ def close_entry(entry):
     entry.save()
 
 def recalculate_duration(task):
-    #TODO recalculate DURATION
+    task_entries=Entry.objects.filter(task=task.id)
+    duration_list = map(calculate_entry, task_entries)
+    duration = sum(duration_list, timedelta(0))
+    task.duration = duration
     task.save()
+
+def calculate_entry(entry):
+    start_date_time = entry.start_date_time
+    end_date_time = entry.end_date_time
+    if(end_date_time == None):
+        offset = pytz.timezone("Europe/Warsaw")
+        end_date_time = datetime.now(timezone.utc) + offset.utcoffset(datetime.now())
+    return end_date_time - start_date_time
+
+def recalculation_needed(task):
+    not_finished_task = Entry.objects.filter(task=task.id, is_finished=False).last()
+    if(not_finished_task == None):
+        return task
+    else:
+        recalculate_duration(task)
+        return task
+
 
 def finished_task(task):
     now_date = datetime.now().isoformat()
     task.is_running = False
     task.end_date_time=now_date
     task.save()
+
 
 @api_view(['GET'])
 def entry_list(request, pk):
